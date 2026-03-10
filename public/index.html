@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>今夜なに食べる？🥗</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #fffbf2 0%, #fff8e8 50%, #fef3d8 100%);
+      font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .bg-emoji {
+      position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+    }
+    .bg-emoji span {
+      position: absolute; font-size: 22px; opacity: 0.07;
+      animation: floatUp 7s ease-in-out infinite;
+    }
+
+    @keyframes floatUp {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(8deg); }
+    }
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1.2); }
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245,166,35,0.4); }
+      50% { box-shadow: 0 0 0 10px rgba(245,166,35,0); }
+    }
+
+    header {
+      background: linear-gradient(135deg, #2d5016 0%, #3d6b1f 100%);
+      color: white; padding: 28px 24px 24px;
+      text-align: center; position: relative; z-index: 1;
+      box-shadow: 0 4px 20px rgba(45,80,22,0.3);
+    }
+    header .icon { font-size: 48px; margin-bottom: 8px; }
+    header h1 { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; }
+    header p { margin-top: 8px; opacity: 0.8; font-size: 13px; }
+
+    main { max-width: 480px; margin: 0 auto; padding: 24px 16px 60px; position: relative; z-index: 1; }
+
+    #upload-area {
+      border: 2.5px dashed #c8b89a; border-radius: 20px;
+      padding: 40px 24px; text-align: center; cursor: pointer;
+      background: rgba(255,255,255,0.7); transition: all 0.3s ease;
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    #upload-area.dragover { border-color: #f5a623; background: rgba(245,166,35,0.05); }
+    #upload-area.has-image { padding: 0; border-color: #4caf84; animation: none; overflow: hidden; border-radius: 20px; }
+    #upload-area .upload-icon { font-size: 52px; margin-bottom: 12px; }
+    #upload-area .upload-title { font-size: 16px; font-weight: 700; color: #3d2c0e; margin-bottom: 6px; }
+    #upload-area .upload-sub { font-size: 13px; color: #8b7355; }
+    #upload-area img { width: 100%; max-height: 280px; object-fit: cover; display: block; border-radius: 18px; }
+    .change-hint {
+      position: absolute; bottom: 12px; right: 12px;
+      background: rgba(0,0,0,0.55); color: white; font-size: 12px;
+      padding: 4px 10px; border-radius: 20px; backdrop-filter: blur(6px);
+      pointer-events: none;
+    }
+    .img-wrap { position: relative; }
+
+    #analyze-btn {
+      display: none; width: 100%; margin-top: 20px; padding: 16px;
+      background: #f5a623; color: white; border: none; border-radius: 14px;
+      font-size: 17px; font-weight: 800; cursor: pointer;
+      transition: all 0.2s ease; box-shadow: 0 6px 20px rgba(245,166,35,0.4);
+      letter-spacing: 0.5px;
+    }
+    #analyze-btn:hover { background: #e8951a; transform: translateY(-2px); }
+
+    #loading {
+      display: none; text-align: center; margin-top: 32px; padding: 28px;
+      background: rgba(255,255,255,0.85); border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #f5a623; display: inline-block; animation: blink 1.2s infinite; margin: 0 3px; }
+
+    #error-box {
+      display: none; margin-top: 20px; padding: 16px;
+      background: #fff0f0; border-radius: 14px; color: #c0392b; font-size: 14px; text-align: center;
+    }
+
+    #result { display: none; animation: fadeSlideUp 0.5s ease forwards; }
+
+    .ingredients-box {
+      margin-top: 24px; padding: 16px 18px;
+      background: rgba(255,255,255,0.9); border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .section-label { font-size: 13px; font-weight: 700; color: #8b7355; margin-bottom: 10px; letter-spacing: 0.5px; }
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag {
+      padding: 5px 12px; background: #fef9f0; border: 1.5px solid #f0d9a0;
+      border-radius: 30px; font-size: 13px; color: #5c4420; font-weight: 600;
+    }
+
+    .menus-wrap { margin-top: 20px; }
+    .menu-card {
+      background: rgba(255,255,255,0.92); border-radius: 18px; margin-bottom: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.07); overflow: hidden;
+      transition: all 0.25s ease; cursor: pointer;
+    }
+    .menu-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.1); }
+    .menu-header { padding: 16px 18px; display: flex; align-items: center; gap: 14px; }
+    .menu-emoji {
+      font-size: 32px; width: 54px; height: 54px; flex-shrink: 0;
+      background: linear-gradient(135deg, #fff3d6, #ffe5a0); border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .menu-name { font-size: 16px; font-weight: 800; color: #2d1a0e; margin-bottom: 4px; }
+    .menu-desc { font-size: 13px; color: #7a6045; margin-bottom: 6px; }
+    .badges { display: flex; gap: 8px; }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 8px; }
+    .badge-time { color: #8b7355; background: #f5efe5; }
+    .badge-easy { color: white; background: #4caf84; font-weight: 700; }
+    .badge-normal { color: white; background: #f5a623; font-weight: 700; }
+    .badge-hard { color: white; background: #e05a5a; font-weight: 700; }
+    .chevron { font-size: 18px; color: #c8a96a; transition: transform 0.2s; margin-left: auto; flex-shrink: 0; }
+    .chevron.open { transform: rotate(90deg); }
+    .menu-steps { padding: 0 18px 16px; border-top: 1px solid #f0e8d8; display: none; }
+    .step { display: flex; gap: 10px; margin-bottom: 8px; align-items: flex-start; margin-top: 12px; }
+    .step-num {
+      background: #f5a623; color: white; font-size: 11px; font-weight: 800;
+      width: 20px; height: 20px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+    }
+    .step-text { font-size: 13px; color: #4a3520; line-height: 1.6; }
+
+    #retry-btn {
+      width: 100%; margin-top: 20px; padding: 14px;
+      background: transparent; color: #8b7355; border: 2px solid #d4b896;
+      border-radius: 14px; font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+    #retry-btn:hover { background: #fdf5e8; }
+  </style>
+</head>
+<body>
+
+<div class="bg-emoji" id="bgEmoji"></div>
+
+<header>
+  <div class="icon">🥗</div>
+  <h1>今夜なに食べる？</h1>
+  <p>冷蔵庫の写真を送るだけでメニューを提案</p>
+</header>
+
+<main>
+  <div id="upload-area">
+    <div class="upload-icon">📷</div>
+    <div class="upload-title">冷蔵庫の写真をアップロード</div>
+    <div class="upload-sub">タップまたはドラッグ＆ドロップ</div>
+  </div>
+  <input type="file" id="file-input" accept="image/*" style="display:none" />
+
+  <button id="analyze-btn">🍽️ メニューを考えてもらう！</button>
+
+  <div id="loading">
+    <div style="font-size:38px;margin-bottom:12px">🤔</div>
+    <div style="font-size:15px;font-weight:700;color:#3d2c0e;margin-bottom:12px">食材を確認しています</div>
+    <span class="dot" style="animation-delay:0s"></span>
+    <span class="dot" style="animation-delay:0.2s"></span>
+    <span class="dot" style="animation-delay:0.4s"></span>
+  </div>
+
+  <div id="error-box"></div>
+
+  <div id="result">
+    <div class="ingredients-box">
+      <div class="section-label">🔍 見つかった食材</div>
+      <div class="tags" id="ingredients-tags"></div>
+    </div>
+    <div class="menus-wrap">
+      <div class="section-label" style="margin-top:20px">🍴 今夜のおすすめ</div>
+      <div id="menu-cards"></div>
+    </div>
+    <button id="retry-btn">🔄 別の写真で試す</button>
+  </div>
+</main>
+
+<script>
+  // 背景絵文字
+  const emojis = ["🥕","🧄","🥦","🍅","🥚","🧅","🥩","🐟","🧀","🫙"];
+  const bg = document.getElementById("bgEmoji");
+  emojis.forEach((e, i) => {
+    const s = document.createElement("span");
+    s.textContent = e;
+    s.style.left = `${(i / emojis.length) * 100 + Math.random() * 8}%`;
+    s.style.top = `${Math.random() * 100}%`;
+    s.style.animationDelay = `${i * 0.7}s`;
+    s.style.fontSize = `${Math.random() * 14 + 14}px`;
+    bg.appendChild(s);
+  });
+
+  let imageBase64 = null, imageType = null;
+  const uploadArea = document.getElementById("upload-area");
+  const fileInput = document.getElementById("file-input");
+  const analyzeBtn = document.getElementById("analyze-btn");
+  const loading = document.getElementById("loading");
+  const errorBox = document.getElementById("error-box");
+  const result = document.getElementById("result");
+
+  uploadArea.addEventListener("click", () => fileInput.click());
+  uploadArea.addEventListener("dragover", e => { e.preventDefault(); uploadArea.classList.add("dragover"); });
+  uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
+  uploadArea.addEventListener("drop", e => { e.preventDefault(); uploadArea.classList.remove("dragover"); handleFile(e.dataTransfer.files[0]); });
+  fileInput.addEventListener("change", e => handleFile(e.target.files[0]));
+
+  function handleFile(file) {
+    if (!file || !file.type.startsWith("image/")) return;
+    imageType = file.type;
+    const reader = new FileReader();
+    reader.onload = e => {
+      imageBase64 = e.target.result.split(",")[1];
+      uploadArea.classList.add("has-image");
+      uploadArea.innerHTML = `<div class="img-wrap"><img src="${e.target.result}" /><span class="change-hint">タップして変更</span></div>`;
+      analyzeBtn.style.display = "block";
+      result.style.display = "none";
+      errorBox.style.display = "none";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  analyzeBtn.addEventListener("click", async () => {
+    if (!imageBase64) return;
+    analyzeBtn.style.display = "none";
+    loading.style.display = "block";
+    errorBox.style.display = "none";
+    result.style.display = "none";
+
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64: imageBase64, mediaType: imageType }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderResult(data);
+    } catch (err) {
+      errorBox.textContent = "⚠️ 解析に失敗しました。もう一度お試しください。";
+      errorBox.style.display = "block";
+      analyzeBtn.style.display = "block";
+    } finally {
+      loading.style.display = "none";
+    }
+  });
+
+  function renderResult(data) {
+    // 食材タグ
+    const tagsEl = document.getElementById("ingredients-tags");
+    tagsEl.innerHTML = (data.ingredients || []).map(i => `<span class="tag">${i}</span>`).join("");
+
+    // メニューカード
+    const cardsEl = document.getElementById("menu-cards");
+    cardsEl.innerHTML = data.menus.map((m, i) => {
+      const dc = m.difficulty === "簡単" ? "easy" : m.difficulty === "普通" ? "normal" : "hard";
+      const steps = (m.steps || []).map((s, j) => `<div class="step"><span class="step-num">${j+1}</span><span class="step-text">${s}</span></div>`).join("");
+      return `
+        <div class="menu-card" style="animation: fadeSlideUp 0.4s ease ${i*0.12}s both" onclick="toggleCard(this)">
+          <div class="menu-header">
+            <div class="menu-emoji">${m.emoji}</div>
+            <div style="flex:1">
+              <div class="menu-name">${m.name}</div>
+              <div class="menu-desc">${m.description}</div>
+              <div class="badges">
+                <span class="badge badge-time">⏱ ${m.time}</span>
+                <span class="badge badge-${dc}">${m.difficulty}</span>
+              </div>
+            </div>
+            <span class="chevron">›</span>
+          </div>
+          <div class="menu-steps">${steps}</div>
+        </div>`;
+    }).join("");
+
+    result.style.display = "block";
+  }
+
+  function toggleCard(card) {
+    const steps = card.querySelector(".menu-steps");
+    const chevron = card.querySelector(".chevron");
+    const isOpen = steps.style.display === "block";
+    steps.style.display = isOpen ? "none" : "block";
+    chevron.classList.toggle("open", !isOpen);
+  }
+
+  document.getElementById("retry-btn").addEventListener("click", () => {
+    uploadArea.classList.remove("has-image");
+    uploadArea.innerHTML = `<div class="upload-icon">📷</div><div class="upload-title">冷蔵庫の写真をアップロード</div><div class="upload-sub">タップまたはドラッグ＆ドロップ</div>`;
+    analyzeBtn.style.display = "none";
+    result.style.display = "none";
+    imageBase64 = null; imageType = null;
+    fileInput.value = "";
+  });
+</script>
+</body>
+</html>
